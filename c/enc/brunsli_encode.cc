@@ -1255,25 +1255,25 @@ void EncodeAC(State* state) {
               const int absval = sign ? -coeff : coeff;
 
               const int k_nat = cur_order[k];
-              const int context_type = context_modes[k_nat];
-              int avrg_ctx = 0;
-              int sign_ctx = kMaxAverageContext;
+              size_t context_type = context_modes[k_nat];
+              size_t avg_ctx = 0;
+              size_t sign_ctx = kMaxAverageContext;
               if ((context_type & 1) && (y > 0)) {
                 if (y > 0) {
                   size_t offset = k_nat & 7;
                   ACPredictContextRow(
                       prev_row_coeffs + offset, encoded_coeffs + offset,
-                      &c->mult_col[offset * 8], &avrg_ctx, &sign_ctx);
+                      &c->mult_col[offset * 8], &avg_ctx, &sign_ctx);
                 }
               } else if ((context_type & 2) && (x > 0)) {
                 if (x > 0) {
                   size_t offset = k_nat & ~7;
                   ACPredictContextCol(
                       prev_col_coeffs + offset, encoded_coeffs + offset,
-                      &c->mult_row[offset], &avrg_ctx, &sign_ctx);
+                      &c->mult_row[offset], &avg_ctx, &sign_ctx);
                 }
               } else if (!context_type) {
-                avrg_ctx = WeightedAverageContext(prev_abs + k, prev_row_delta);
+                avg_ctx = WeightedAverageContext(prev_abs + k, prev_row_delta);
                 sign_ctx = prev_sgn[k] * 3 + prev_sgn[k - kDCTBlockSize];
               }
               sign_ctx = sign_ctx * kDCTBlockSize + k;
@@ -1284,13 +1284,13 @@ void EncodeAC(State* state) {
                   m.context_offset +
                   ZeroDensityContext(num_nzeros, k, cur_ctx_bits);
               if (absval <= kNumDirectCodes) {
-                data_stream.AddCode(absval - 1, zdens_ctx, avrg_ctx,
+                data_stream.AddCode(absval - 1, zdens_ctx, avg_ctx,
                                     &entropy_source);
               } else {
                 const int base_code = absval - kNumDirectCodes + 1;
                 const int nbits = Log2FloorNonZero(base_code) - 1;
                 data_stream.AddCode(kNumDirectCodes + nbits, zdens_ctx,
-                                    avrg_ctx, &entropy_source);
+                                    avg_ctx, &entropy_source);
                 const int extra_bits = base_code - (2 << nbits);
                 const int first_extra_bit = (extra_bits >> nbits) & 1;
                 Prob* const p = &c->first_extra_bit_prob[k * 10 + nbits];

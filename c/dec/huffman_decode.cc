@@ -25,11 +25,11 @@ static const uint8_t kDefaultCodeLength = 8;
 static const uint8_t kCodeLengthRepeatCode = 16;
 
 int ReadHuffmanCodeLengths(const uint8_t* code_length_code_lengths,
-                           int num_symbols, uint8_t* code_lengths,
+                           size_t num_symbols, uint8_t* code_lengths,
                            BrunsliBitReader* br) {
-  int symbol = 0;
+  size_t symbol = 0;
   uint8_t prev_code_len = kDefaultCodeLength;
-  int repeat = 0;
+  size_t repeat = 0;
   uint8_t repeat_code_len = 0;
   int space = 32768;
   HuffmanCode table[32];
@@ -57,9 +57,9 @@ int ReadHuffmanCodeLengths(const uint8_t* code_length_code_lengths,
         space -= 32768u >> code_len;
       }
     } else {
-      const int extra_bits = code_len - 14;
-      int old_repeat;
-      int repeat_delta;
+      uint32_t extra_bits = code_len - 14; // >= 2
+      size_t old_repeat;
+      size_t repeat_delta;
       uint8_t new_len = 0;
       if (code_len == kCodeLengthRepeatCode) {
         new_len = prev_code_len;
@@ -69,11 +69,11 @@ int ReadHuffmanCodeLengths(const uint8_t* code_length_code_lengths,
         repeat_code_len = new_len;
       }
       old_repeat = repeat;
-      if (repeat > 0) {
+      if (repeat > 0) {  // >= 3
         repeat -= 2;
         repeat <<= extra_bits;
       }
-      repeat += (int)BrunsliBitReaderRead(br, extra_bits) + 3;
+      repeat += BrunsliBitReaderRead(br, extra_bits) + 3u;
       repeat_delta = repeat - old_repeat;
       if (symbol + repeat_delta > num_symbols) {
         return 0;
@@ -243,7 +243,7 @@ bool HuffmanDecodingData::ReadFromBitStream(
 
 // Decodes the next Huffman coded symbol from the bit-stream.
 uint16_t HuffmanDecodingData::ReadSymbol(BrunsliBitReader* br) const {
-  size_t n_bits;
+  uint32_t n_bits;
   const HuffmanCode* table = table_.data();
   table += BrunsliBitReaderGet(br, kHuffmanTableBits);
   n_bits = table->bits;

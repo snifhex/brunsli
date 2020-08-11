@@ -76,7 +76,7 @@ void BrunsliBitReaderSetOptimistic(BrunsliBitReader* br) {
   br->is_optimistic_ = true;
 }
 
-bool BrunsliBitReaderCanRead(BrunsliBitReader* br, uint32_t n_bits) {
+bool BrunsliBitReaderCanRead(BrunsliBitReader* br, size_t n_bits) {
   if (br->is_optimistic_) return true;
   if (br->num_debt_bytes_ != 0) return false;
   if (br->num_bits_ >= n_bits) return true;

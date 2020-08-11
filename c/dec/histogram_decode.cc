@@ -36,16 +36,17 @@ size_t ReadShortHuffmanCode(BrunsliBitReader* br, const int8_t* tree) {
 
 }  // namespace
 
-bool ReadHistogram(size_t precision_bits, std::vector<uint32_t>* counts,
+bool ReadHistogram(uint32_t precision_bits, std::vector<uint32_t>* counts,
                    BrunsliBitReader* br) {
   BRUNSLI_DCHECK(!counts->empty());
+  uint32_t space = 1u << precision_bits;
   const size_t length = counts->size();
   std::fill(counts->begin(), counts->end(), 0);
   uint32_t* histogram = counts->data();
   int simple_code = BrunsliBitReaderRead(br, 1);
   if (simple_code == 1) {
     size_t max_bits_counter = length - 1;
-    size_t max_bits = 0;
+    uint32_t max_bits = 0;
     int symbols[2] = {0};
     const size_t num_symbols = BrunsliBitReaderRead(br, 1) + 1u;
     while (max_bits_counter) {
@@ -56,18 +57,18 @@ bool ReadHistogram(size_t precision_bits, std::vector<uint32_t>* counts,
       symbols[i] = BrunsliBitReaderRead(br, max_bits) % length;
     }
     if (num_symbols == 1) {
-      histogram[symbols[0]] = 1u << precision_bits;
+      histogram[symbols[0]] = space;
     } else {
       if (symbols[0] == symbols[1]) {  // corrupt data
         return false;
       }
       uint32_t value = BrunsliBitReaderRead(br, precision_bits);
       histogram[symbols[0]] = value;
-      histogram[symbols[1]] = (1u << precision_bits) - value;
+      histogram[symbols[1]] = space - value;
     }
   } else {
     size_t real_length = ReadShortHuffmanCode(br, kLengthTree);
-    size_t total_count = 0;
+    uint32_t total_count = 0;
     uint32_t log_counts[BRUNSLI_ANS_MAX_SYMBOLS];
     size_t omit_pos = 0;
     BRUNSLI_DCHECK(real_length > 2);
@@ -91,12 +92,12 @@ bool ReadHistogram(size_t precision_bits, std::vector<uint32_t>* counts,
       }
       total_count += histogram[i];
     }
-    if (total_count >= (1u << precision_bits)) {
+    if (total_count >= space) {
       // The histogram we've read sums to more than total_count (including at
       // least 1 for the omitted value).
       return false;
     }
-    histogram[omit_pos] = (1u << precision_bits) - total_count;
+    histogram[omit_pos] = space - total_count;
   }
   return BrunsliBitReaderIsHealthy(br);
 }
